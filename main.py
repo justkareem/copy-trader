@@ -23,7 +23,7 @@ url = base64.b64decode("aHR0cHM6Ly9wdW1wcG9ydGFsLmZ1bi9hcGkvdHJhZGU/YXBpLWtleT0=
 uri = base64.b64decode("d3NzOi8vcHVtcHBvcnRhbC5mdW4vYXBpL2RhdGE=").decode("utf-8")
 
 
-def should_trigger_sell(mint, amount):
+def should_trigger_sell(mint, pool):
     """
     This function triggers a sell order if certain conditions are met.
     Running in a separate thread to handle multiple buy events concurrently.
@@ -42,11 +42,11 @@ def should_trigger_sell(mint, amount):
                     response = requests.post(url="https://pumpportal.fun/api/trade?api-key=your-api-key-here", data={
                         "action": "sell",  # Action to perform, "buy" or "sell"
                         "mint": mint,  # Contract address of the token you want to trade
-                        "amount": amount,  # Amount of SOL or tokens to trade
+                        "amount": "100%",  # Amount of SOL or tokens to trade
                         "denominatedInSol": DENOMINATED_IN_SOL,  # "true" if amount is in SOL
                         "slippage": SLIPPAGE,  # Percent slippage allowed
                         "priorityFee": PRIORITY_FEE,  # Amount used to enhance transaction speed
-                        "pool": "pump"  # Exchange to trade on. "pump", "raydium", or "auto"
+                        "pool": pool  # Exchange to trade on. "pump", "raydium", or "auto"
                     })
                     response_data = response.json()  # Tx signature or error(s)
                     signature = response_data.get("signature")
@@ -72,6 +72,7 @@ async def subscribe():
             print(data)
             if data.get("txType") == "buy" and data.get("pool") == "pump":
                 print("Found a new buy")
+                pool = data.get("pool")
                 response = requests.post(url=url, data={
                     "action": "buy",  # Action to perform, "buy" or "sell"
                     "mint": data["mint"],  # Contract address of the token you want to trade
@@ -85,7 +86,7 @@ async def subscribe():
                 signature = response_data.get("signature")
                 if signature is not None:
                     print(f'Transaction: https://solscan.io/tx/{response_data["signature"]}')
-                    should_trigger_sell(data["mint"], TRADE_AMOUNT)
+                    should_trigger_sell(data["mint"], pool)
                 else:
                     print(f"Transaction not successful: {response_data}")
 
