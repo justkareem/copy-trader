@@ -12,6 +12,7 @@ COPY_ADDRESSES = ["", ]  # List of accounts to watch
 COPY_ADDRESSES = [address.strip() for address in COPY_ADDRESSES]
 
 # Constants for the trade details
+MIN_BUY_AMOUNT = 3  # min buy amount in SOL
 TRADE_AMOUNT = 100000  # Amount of SOL or tokens per buy trade
 DENOMINATED_IN_SOL = "false"  # "true" if amount is in SOL, "false" if in tokens
 SLIPPAGE = 10  # Percent slippage allowed
@@ -69,9 +70,11 @@ async def subscribe():
 
         async for message in websocket:
             data = json.loads(message)
-            print(data)
             if data.get("txType") == "buy" and data.get("pool") == "pump":
                 print("Found a new buy")
+                trader_buy = data.get("solAmount")
+                if trader_buy < MIN_BUY_AMOUNT:
+                    continue
                 pool = data.get("pool")
                 response = requests.post(url=url, data={
                     "action": "buy",  # Action to perform, "buy" or "sell"
