@@ -40,7 +40,7 @@ def should_trigger_sell(mint, pool):
             async for message in mint_websocket:
                 data = json.loads(message)
                 if data.get("txType") == "buy" and data.get("pool") == "pump" and data.get("solAmount") >= 50:
-                    response = requests.post(url="https://pumpportal.fun/api/trade?api-key=your-api-key-here", data={
+                    response = requests.post(url=url, data={
                         "action": "sell",  # Action to perform, "buy" or "sell"
                         "mint": mint,  # Contract address of the token you want to trade
                         "amount": "100%",  # Amount of SOL or tokens to trade
@@ -88,7 +88,38 @@ async def subscribe():
                 response_data = response.json()  # Tx signature or error(s)
                 signature = response_data.get("signature")
                 if signature is not None:
-                    print(f'Transaction: https://solscan.io/tx/{response_data["signature"]}')
+                    headers = {
+                        "accept": "application/json, text/plain, */*",
+                        "accept-language": "en-US,en;q=0.9,ro;q=0.8",
+                        "origin": "https://solscan.io",
+                        "priority": "u=1, i",
+                        "sec-ch-ua": '"Not(A:Brand";v="99", "Microsoft Edge";v="133", "Chromium";v="133"',
+                        "sec-ch-ua-mobile": "?0",
+                        "sec-ch-ua-platform": '"Windows"',
+                        "sec-fetch-dest": "empty",
+                        "sec-fetch-mode": "cors",
+                        "sec-fetch-site": "same-site",
+                        "sol-aut": "KOsxksAFeRJFrTrBB9dls0fKJirhtYj7o=ptJR-4",
+                        "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36 Edg/133.0.0.0"
+                    }
+
+                    response = requests.get(f"https://api-v2.solscan.io/v2/transaction/detail?tx={signature}",
+                                            headers=headers)
+                    response_data = response.json()
+                    tx_status = response_data.get("success")
+                    if tx_status is False:
+                        response = requests.post(url=url, data={
+                            "action": "buy",  # Action to perform, "buy" or "sell"
+                            "mint": data["mint"],  # Contract address of the token you want to trade
+                            "amount": TRADE_AMOUNT,  # Amount of SOL or tokens to trade
+                            "denominatedInSol": DENOMINATED_IN_SOL,  # "true" if amount is in SOL
+                            "slippage": SLIPPAGE,  # Percent slippage allowed
+                            "priorityFee": PRIORITY_FEE,  # Amount used to enhance transaction speed
+                            "pool": "raydium"
+                        })
+                        signature = response.json().get("signature")
+                        pool = "raydium"
+                    print(f'Transaction: https://solscan.io/tx/{signature}')
                     should_trigger_sell(data["mint"], pool)
                 else:
                     print(f"Transaction not successful: {response_data}")
